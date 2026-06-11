@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK Youth Health Dashboard — HBSC 2022/23</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --text: #1a1a18;
+      --text-secondary: #5f5e5a;
+      --text-tertiary: #888780;
+      --border: rgba(0,0,0,0.12);
+      --border-strong: rgba(0,0,0,0.22);
+      --teal: #1D9E75;
+      --teal-light: #e1f5ee;
+      --purple: #7F77DD;
+      --blue: #378ADD;
+      --coral: #D85A30;
+      --amber: #BA7517;
+      --gray: #888780;
+      --gray-light: #D3D1C7;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --bg-secondary: #252523;
+        --text: #f0ede8;
+        --text-secondary: #b4b2a9;
+        --text-tertiary: #888780;
+        --border: rgba(255,255,255,0.10);
+        --border-strong: rgba(255,255,255,0.20);
+        --teal-light: #04342c;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .page-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* Header */
+    .dash-header {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .dash-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .dash-title i { color: var(--teal); font-size: 22px; }
+    .dash-sub { font-size: 13px; color: var(--text-secondary); }
+    .badge-hbsc { font-size: 11px; padding: 4px 10px; background: var(--teal-light); color: var(--teal); border-radius: 20px; font-weight: 500; white-space: nowrap; align-self: flex-start; margin-top: 4px; }
+
+    /* Tabs */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 6px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      flex: 1;
+      min-width: 120px;
+      font-size: 13px;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+    .tab-btn:hover { background: var(--bg-secondary); color: var(--text); }
+    .tab-btn.active { background: var(--teal); color: #fff; font-weight: 500; }
+
+    /* Tab content */
+    .tab-content { display: none; }
+    .tab-content.visible { display: block; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .filter-btn {
+      font-size: 13px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 0.5px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .filter-btn:hover { background: var(--bg-secondary); }
+    .filter-btn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+    /* Metric cards */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+    .metric-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+    .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+    .metric-label i { font-size: 14px; }
+    .metric-value { font-size: 30px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 6px; }
+    .metric-unit { font-size: 16px; font-weight: 400; color: var(--text-secondary); }
+    .metric-trend { font-size: 12px; }
+    .trend-bad { color: var(--coral); }
+    .trend-ok { color: var(--teal); }
+    .trend-neutral { color: var(--text-tertiary); }
+
+    /* Chart cards */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    @media (max-width: 640px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+    .chart-full { grid-column: 1 / -1; }
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .chart-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 12px; color: var(--text-secondary); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+    /* Fact band */
+    .fact-band {
+      background: var(--teal-light);
+      border-left: 3px solid var(--teal);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 10px 14px;
+      margin-bottom: 1.25rem;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .fact-band strong { color: var(--teal); }
+
+    /* Source note */
+    .source-note {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    /* Screen reader only */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1 class="sr-only">MK Youth Health Dashboard — интерактивен приказ на HBSC податоци за физичка активност, спиење и здрави навики кај македонски адолесценти</h1>
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <div class="dash-title"><i class="ti ti-heart"></i> MK Youth Health Dashboard</div>
+      <div class="dash-sub">HBSC податоци за здравјето и навиките на македонски адолесценти (11–15 год.) — 2022/2023</div>
+    </div>
+    <span class="badge-hbsc"><i class="ti ti-chart-bar" style="font-size:12px; vertical-align:-1px; margin-right:3px;"></i>HBSC Study</span>
+  </div>
+
+  <!-- Tabs -->
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab('overview',this)"><i class="ti ti-layout-dashboard"></i> Преглед</button>
+    <button class="tab-btn" role="tab" onclick="switchTab('activity',this)"><i class="ti ti-run"></i> Физичка активност</button>
+    <button class="tab-btn" role="tab" onclick="switchTab('sleep',this)"><i class="ti ti-moon"></i> Спиење</button>
+    <button class="tab-btn" role="tab" onclick="switchTab('habits',this)"><i class="ti ti-salad"></i> Навики</button>
+  </nav>
+
+  <!-- TAB: Overview -->
+  <div id="tab-overview" class="tab-content visible" role="tabpanel">
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="setFilter('all',this)">Сите</button>
+      <button class="filter-btn" onclick="setFilter('boys',this)">Момчиња</button>
+      <button class="filter-btn" onclick="setFilter('girls',this)">Девојчиња</button>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label"><i class="ti ti-run"></i> Физички активни 60+ мин/ден</div>
+        <div class="metric-value" id="m1">22<span class="metric-unit">%</span></div>
+        <div class="metric-trend trend-bad">↓ под СЗО препорака</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><i class="ti ti-moon"></i> Доволно спиење</div>
+        <div class="metric-value" id="m2">41<span class="metric-unit">%</span></div>
+        <div class="metric-trend trend-bad">↓ испод препорака</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><i class="ti ti-apple"></i> Овошје/зеленчук дневно</div>
+        <div class="metric-value" id="m3">34<span class="metric-unit">%</span></div>
+        <div class="metric-trend trend-neutral">≈ регионален просек</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><i class="ti ti-device-mobile"></i> Екран 4+ часа/ден</div>
+        <div class="metric-value" id="m4">58<span class="metric-unit">%</span></div>
+        <div class="metric-trend trend-bad">↑ над препорачаниот просек</div>
+      </div>
+    </div>
+
+    <div class="fact-band"><strong>Знаеше ли?</strong> Само 1 од 5 македонски адолесценти ја исполнува СЗО-препораката за 60 минути умерена до интензивна физичка активност дневно.</div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Физичка активност по возраст</div>
+        <div class="chart-desc">% физички активни 60+ мин секој ден</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#1D9E75;"></span>Момчиња</span>
+          <span><span class="legend-dot" style="background:#7F77DD;"></span>Девојчиња</span>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="chart-age" role="img" aria-label="Физичка активност по возраст и пол">Момчиња 11г: 30%, 13г: 24%, 15г: 18%. Девојчиња 11г: 24%, 13г: 16%, 15г: 11%.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Спиење по возраст</div>
+        <div class="chart-desc">% со препорачани часови сон</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#378ADD;"></span>Реално</span>
+          <span><span class="legend-dot" style="background:#D3D1C7; border:0.5px solid #888;"></span>Препорака</span>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="chart-sleep" role="img" aria-label="Споредба реален и препорачан сон">11г: 54% реално. 13г: 41%. 15г: 28%.</canvas></div>
+      </div>
+      <div class="chart-card chart-full">
+        <div class="chart-title">Споредба на навики по пол</div>
+        <div class="chart-desc">% кои ја извршуваат навиката редовно</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#1D9E75;"></span>Момчиња</span>
+          <span><span class="legend-dot" style="background:#7F77DD;"></span>Девојчиња</span>
+        </div>
+        <div style="position:relative;height:220px;"><canvas id="chart-habits-overview" role="img" aria-label="Споредба навики по пол">Активност: 27% момчиња, 17% девојчиња. Спиење: 43% / 39%. Исхрана: 31% / 37%. Екран 4+ч: 54% / 62%.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Activity -->
+  <div id="tab-activity" class="tab-content" role="tabpanel">
+    <div class="fact-band"><strong>Тренд:</strong> Физичката активност значително опаѓа со возраста — особено кај девојчиња. Разликата помеѓу 11 и 15 год. е речиси двојна.</div>
+    <div class="charts-grid">
+      <div class="chart-card chart-full">
+        <div class="chart-title">Физичка активност — тренд по возраст и пол</div>
+        <div class="chart-desc">% кои пријавуваат 60+ мин умерена активност дневно</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#1D9E75;"></span>Момчиња</span>
+          <span><span class="legend-dot" style="background:#7F77DD;"></span>Девојчиња</span>
+        </div>
+        <div style="position:relative;height:260px;"><canvas id="chart-act-line" role="img" aria-label="Линиски график физичка активност по возраст">Момчиња: 30, 24, 18. Девојчиња: 24, 16, 11.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Вид на спортска активност</div>
+        <div class="chart-desc">Најчести форми на движење</div>
+        <div style="position:relative;height:240px;"><canvas id="chart-sport" role="img" aria-label="Видови спортска активност">Фудбал 38%, Одење 28%, Пливање 14%, Кошарка 12%, Друго 8%.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Пречки за активност</div>
+        <div class="chart-desc">% кои ја наведуваат причината</div>
+        <div style="position:relative;height:240px;"><canvas id="chart-barriers" role="img" aria-label="Пречки за физичка активност">Нема време 45%, Телефон 38%, Нема друштво 22%, Скапи клубови 18%.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Sleep -->
+  <div id="tab-sleep" class="tab-content" role="tabpanel">
+    <div class="fact-band"><strong>СЗО препорака:</strong> 11–13 год. → 9–11 часа. 14–17 год. → 8–10 часа. Само 28% од 15-годишниците спијат доволно во текот на учебната недела.</div>
+    <div class="charts-grid">
+      <div class="chart-card chart-full">
+        <div class="chart-title">Просечни часови сон наспроти препораката</div>
+        <div class="chart-desc">Просечни пријавени часови сон во текот на учебната недела</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#378ADD;"></span>Реален просек</span>
+          <span><span class="legend-dot" style="background:#1D9E75;"></span>СЗО минимум</span>
+        </div>
+        <div style="position:relative;height:260px;"><canvas id="chart-sleep-hours" role="img" aria-label="Часови сон vs препорака">11г: 8.2ч реално, 9ч препорака. 13г: 7.6ч, 9ч. 15г: 7.0ч, 8ч.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Самопроценет квалитет на сон</div>
+        <div class="chart-desc">Субјективна проценка на адолесцентите</div>
+        <div style="position:relative;height:220px;"><canvas id="chart-sleep-quality" role="img" aria-label="Квалитет на сон">Одличен 18%, Добар 34%, Задоволителен 28%, Лош 20%.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Причини за лош сон</div>
+        <div class="chart-desc">% кои ја наведуваат причината</div>
+        <div style="position:relative;height:220px;"><canvas id="chart-sleep-reasons" role="img" aria-label="Причини за лош сон">Мобилен 61%, Стрес 42%, Доцно легнување 38%, Бука 19%.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Habits -->
+  <div id="tab-habits" class="tab-content" role="tabpanel">
+    <div class="fact-band"><strong>Здрава исхрана:</strong> Само 34% јадат овошје или зеленчук секој ден. Помалку од 20% јадат појадок секој учебен ден.</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Навики во исхраната</div>
+        <div class="chart-desc">% кои ја практикуваат навиката дневно</div>
+        <div style="position:relative;height:240px;"><canvas id="chart-food" role="img" aria-label="Навики во исхраната">Слатки пијалаци 52%, Грицки 48%, Млечни 44%, Овошје 34%, Зеленчук 31%.</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Екранско време дневно</div>
+        <div class="chart-desc">Часови пред екран во слободно време</div>
+        <div style="position:relative;height:240px;"><canvas id="chart-screen" role="img" aria-label="Екранско време">Под 2ч 15%, 2-4ч 27%, 4-6ч 32%, Над 6ч 26%.</canvas></div>
+      </div>
+      <div class="chart-card chart-full">
+        <div class="chart-title">Здрави навики низ возрасните групи</div>
+        <div class="chart-desc">% кои редовно ги практикуваат навиките</div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#1D9E75;"></span>11 год.</span>
+          <span><span class="legend-dot" style="background:#378ADD;"></span>13 год.</span>
+          <span><span class="legend-dot" style="background:#7F77DD;"></span>15 год.</span>
+        </div>
+        <div style="position:relative;height:240px;"><canvas id="chart-habits-age" role="img" aria-label="Здрави навики по возраст">Појадок: 42/28/18. Овошје: 40/35/29. Зеленчук: 38/33/27. Вода: 55/48/41.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Source note -->
+  <div class="source-note">
+    <i class="ti ti-info-circle" style="flex-shrink:0; margin-top:1px;"></i>
+    <span>Извор: HBSC International Report 2022/2023 и MK HBSC Platform. Податоците се репрезентативни за македонски адолесценти на возраст 11–15 години. Вредностите се приближни врз основа на јавно достапни HBSC извештаи. Изработено во рамките на предметот ПНУВ — дополнителна задача.</span>
+  </div>
+</div>
+
+<script>
+  const C = {
+    teal:   '#1D9E75',
+    purple: '#7F77DD',
+    blue:   '#378ADD',
+    coral:  '#D85A30',
+    amber:  '#BA7517',
+    gray:   '#888780',
+    grayL:  '#D3D1C7'
+  };
+
+  const baseOpts = (yMax, pct=true) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(128,128,128,0.08)' }, ticks: { font: { size: 11 }, color: C.gray } },
+      y: {
+        grid: { color: 'rgba(128,128,128,0.08)' },
+        ticks: { font: { size: 11 }, color: C.gray, callback: v => pct ? v + '%' : v + 'ч' },
+        max: yMax
+      }
+    }
+  });
+
+  const hBarOpts = (xMax) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(128,128,128,0.08)' }, ticks: { font: { size: 11 }, color: C.gray, callback: v => v + '%' }, max: xMax },
+      y: { grid: { display: false }, ticks: { font: { size: 11 }, color: C.gray } }
+    }
+  });
+
+  function bar(id, labels, datasets, yMax) {
+    const el = document.getElementById(id); if (!el) return;
+    new Chart(el, { type: 'bar', data: { labels, datasets }, options: baseOpts(yMax) });
+  }
+
+  function line(id, labels, datasets, yMin, yMax, pct=true) {
+    const el = document.getElementById(id); if (!el) return;
+    const opts = { ...baseOpts(yMax, pct), scales: { ...baseOpts(yMax, pct).scales, y: { ...baseOpts(yMax, pct).scales.y, min: yMin } } };
+    new Chart(el, { type: 'line', data: { labels, datasets }, options: opts });
+  }
+
+  function hbar(id, labels, data, colors, xMax) {
+    const el = document.getElementById(id); if (!el) return;
+    new Chart(el, { type: 'bar', data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 4 }] }, options: hBarOpts(xMax) });
+  }
+
+  function donut(id, labels, data, colors) {
+    const el = document.getElementById(id); if (!el) return;
+    new Chart(el, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, color: C.gray, boxWidth: 12, padding: 8 } } } }
+    });
+  }
+
+  function ds(label, data, color, radius=4) {
+    return { label, data, backgroundColor: color, borderRadius: radius };
+  }
+
+  function lineds(label, data, color, dashed=false) {
+    return { label, data, borderColor: color, backgroundColor: color + '18', fill: true, tension: 0.35, pointRadius: 5, borderWidth: 2, borderDash: dashed ? [5,3] : [] };
+  }
+
+  window.addEventListener('load', () => {
+    const ages = ['11 год.', '13 год.', '15 год.'];
+
+    bar('chart-age', ages, [ds('Момчиња',[30,24,18],C.teal), ds('Девојчиња',[24,16,11],C.purple)], 40);
+    bar('chart-sleep', ages, [ds('Реално',[54,41,28],C.blue), ds('Препорака',[100,100,100],C.grayL)], 110);
+    bar('chart-habits-overview',
+      ['Физичка активност','Доволно спиење','Здрава исхрана','Екран 4+ ч'],
+      [ds('Момчиња',[27,43,31,54],C.teal), ds('Девојчиња',[17,39,37,62],C.purple)], 75
+    );
+
+    line('chart-act-line', ages,
+      [lineds('Момчиња',[30,24,18],C.teal), { ...lineds('Девојчиња',[24,16,11],C.purple,true), fill: true }],
+      0, 40
+    );
+    hbar('chart-barriers', ['Нема слободно\nвреме','Телефон/компјутер','Нема друштво','Скапи клубови'], [45,38,22,18], [C.coral,C.coral,C.gray,C.gray], 60);
+    donut('chart-sport', ['Фудбал','Одење/пешачење','Пливање','Кошарка','Друго'], [38,28,14,12,8], [C.teal,C.blue,C.purple,C.amber,C.grayL]);
+
+    line('chart-sleep-hours', ages,
+      [
+        { ...lineds('Реален просек',[8.2,7.6,7.0],C.blue), fill: true },
+        { label:'СЗО минимум', data:[9,9,8], borderColor: C.teal, backgroundColor:'transparent', fill:false, tension:0.3, pointRadius:4, borderWidth:2, borderDash:[6,3] }
+      ],
+      6, 10.5, false
+    );
+    donut('chart-sleep-quality', ['Одличен','Добар','Задоволителен','Лош'], [18,34,28,20], [C.teal,C.blue,C.amber,C.coral]);
+    hbar('chart-sleep-reasons', ['Мобилен пред\nспиење','Стрес/тревожност','Доцно\nлегнување','Бучно\nопкружување'], [61,42,38,19], [C.coral,C.coral,C.gray,C.gray], 75);
+
+    hbar('chart-food', ['Слатки пијалаци','Грицки','Млечни производи','Овошје','Зеленчук'], [52,48,44,34,31], [C.coral,C.coral,C.blue,C.teal,C.teal], 65);
+    donut('chart-screen', ['Под 2 часа','2–4 часа','4–6 часа','Над 6 часа'], [15,27,32,26], [C.teal,C.blue,C.amber,C.coral]);
+    bar('chart-habits-age',
+      ['Редовен\nпојадок','Овошје\nдневно','Зеленчук\nдневно','Вода 6+\nчаши'],
+      [ds('11 год.',[42,40,38,55],C.teal), ds('13 год.',[28,35,33,48],C.blue), ds('15 год.',[18,29,27,41],C.purple)], 65
+    );
+  });
+
+  const filterData = {
+    all:   { m1:22, m2:41, m3:34, m4:58 },
+    boys:  { m1:27, m2:43, m3:31, m4:54 },
+    girls: { m1:17, m2:39, m3:37, m4:62 }
+  };
+
+  function setFilter(key, el) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const d = filterData[key];
+    document.getElementById('m1').innerHTML = d.m1 + '<span class="metric-unit">%</span>';
+    document.getElementById('m2').innerHTML = d.m2 + '<span class="metric-unit">%</span>';
+    document.getElementById('m3').innerHTML = d.m3 + '<span class="metric-unit">%</span>';
+    document.getElementById('m4').innerHTML = d.m4 + '<span class="metric-unit">%</span>';
+  }
+
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('visible'));
+    document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    document.getElementById('tab-' + name).classList.add('visible');
+    el.classList.add('active');
+    el.setAttribute('aria-selected','true');
+  }
+</script>
+</body>
+</html>
